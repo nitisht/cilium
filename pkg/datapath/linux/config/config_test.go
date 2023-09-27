@@ -18,6 +18,7 @@ import (
 
 	"github.com/cilium/ebpf/rlimit"
 
+	"github.com/cilium/cilium/pkg/datapath/linux/bandwidth"
 	dpdef "github.com/cilium/cilium/pkg/datapath/linux/config/defines"
 	"github.com/cilium/cilium/pkg/datapath/loader"
 	datapath "github.com/cilium/cilium/pkg/datapath/types"
@@ -91,7 +92,9 @@ func writeConfig(c *C, header string, write writeFn) {
 	}
 	for _, test := range tests {
 		c.Logf("  Testing %s configuration: %s", header, test.description)
-		cfg := &HeaderfileWriter{}
+		cfg := &HeaderfileWriter{
+			bwmgr: &bandwidth.Manager{},
+		}
 		c.Assert(write(test.output, cfg), test.expResult)
 	}
 }
@@ -342,7 +345,7 @@ func TestWriteNodeConfigExtraDefines(t *testing.T) {
 	cfg := HeaderfileWriter{nodeExtraDefineFns: []dpdef.Fn{
 		func() (dpdef.Map, error) { return dpdef.Map{"FOO": "0x1", "BAR": "0x2"}, nil },
 		func() (dpdef.Map, error) { return dpdef.Map{"BAZ": "0x3"}, nil },
-	}}
+	}, bwmgr: &bandwidth.Manager{}}
 
 	buffer.Reset()
 	require.NoError(t, cfg.WriteNodeConfig(&buffer, &dummyNodeCfg))
